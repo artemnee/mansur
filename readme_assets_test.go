@@ -5,6 +5,7 @@ package main
 //	MANSUR_ASSETS=docs go test -run TestReadmeAssets .
 
 import (
+	"fmt"
 	"image"
 	"image/color"
 	"image/gif"
@@ -97,11 +98,11 @@ func banner() *pixmap {
 	pm := card(232, 52)
 	bigText(pm, 12, 11, "MANSUR", catBody)
 	pm.text(12, 31, "a tiny gpt cat for macos", uiText)
-	pm.text(12, 41, "pure go, offline, 225 kb brain", uiGrey)
+	pm.text(12, 41, "pure go, offline, 490 kb brain", uiGrey)
 	sparkles(pm, [][2]int{{98, 12}, {170, 40}, {222, 30}})
 	p := petAt(stIdle, 30)
 	blit(pm, p.render(), 186, 17)
-	bubble(pm, 176, 4, "привет!")
+	bubble(pm, 182, 4, "hi!")
 	return pm
 }
 
@@ -174,8 +175,9 @@ func panel(title string, lines []string, hover int) *pixmap {
 }
 
 func menu() *pixmap {
-	m := panel("", []string{"сытость ████░", "возраст: 3 дн.", "поговорить", "покормить ягодкой",
-		"уложить спать", "перерывы: вкл", "автозапуск: выкл", "выход"}, 2)
+	en := func(k string) string { return trIn("en", k) }
+	m := panel("", []string{en("full") + "████░", fmt.Sprintf(en("age"), 3), en("talk"), en("feed"),
+		en("sleep"), en("breaks") + en("on"), en("autostart") + en("off"), en("language") + en("auto"), en("quit")}, 2)
 	pm := newPixmap(m.w+44, m.h+4)
 	for i, c := range m.px {
 		pm.set(i%m.w, 2+i/m.w, c)
@@ -185,14 +187,14 @@ func menu() *pixmap {
 }
 
 func chat() *pixmap {
-	w := textW("enter - ок   esc - закрыть") + 12
+	w := textW(trIn("en", "hint")) + 12
 	in := newPixmap(w, pad*2+lineH*3+6)
 	in.box(0, 0, w, in.h, uiBg, uiBorder)
-	in.text(6, pad+1, "напиши мансуру:", uiGrey)
-	in.text(6, pad+lineH+4, "какой сегодня день?_", uiText)
-	in.text(6, in.h-pad-lineH+1, "enter - ок   esc - закрыть", uiGrey)
+	in.text(6, pad+1, trIn("en", "write"), uiGrey)
+	in.text(6, pad+lineH+4, "what day is it?_", uiText)
+	in.text(6, in.h-pad-lineH+1, trIn("en", "hint"), uiGrey)
 
-	say := "сегодня вторник"
+	say := "today is tuesday"
 	bw := textW(say) + 10
 	pm := newPixmap(w+bw+10, 60)
 	for i, c := range in.px {
@@ -211,11 +213,11 @@ func demoGIF(path string) error {
 		say   string
 	}
 	scenes := []scene{
-		{stIdle, 40, "привет!"},
+		{stIdle, 40, "hi!"},
 		{stWalk, 30, ""},
-		{stHappy, 40, "мур-мур ♥"},
-		{stJump, 12, "хоп!"},
-		{stEat, 60, "ням-ням!"},
+		{stHappy, 40, "purr ♥"},
+		{stJump, 12, "hop!"},
+		{stEat, 60, "nom nom!"},
 		{stSleep, 60, ""},
 	}
 	const W, H, scale = 104, 64, 4

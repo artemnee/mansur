@@ -307,9 +307,10 @@ func (u *ui) syncPet() {
 // reply is a finished answer; q is the question it answered (empty means nothing to remember).
 type reply struct{ q, text string }
 
-// minConf: below this confidence an answer counts as made up at random. In the post-training
-// check, correct answers scored 0.90–1.00 and gibberish at most 0.86.
-const minConf = 0.88
+// minConf: below this confidence an answer counts as made up at random. On the held-out test
+// of the bilingual model it drops about one wrong answer in six and almost no right ones; the
+// network is often confidently wrong, so a higher threshold would mostly cut good answers.
+const minConf = 0.80
 
 // speak asks the mini-GPT for an answer in the background so the animation does not freeze.
 // An empty text means Mansur talks on his own; otherwise he answers the human, remembering past exchanges.
@@ -322,6 +323,11 @@ func (u *ui) speak(mood, text string) {
 	if text != "" && time.Since(u.lastChat) < 3*time.Minute {
 		history = append(history, u.history...)
 	}
+	lang := uiLang()
+	if text != "" {
+		lang = msgLang(text) // answer in the language the human wrote in
+	}
+	mood = lang + "/" + mood
 	go func() {
 		rng := rand.New(rand.NewPCG(rand.Uint64(), rand.Uint64()))
 		// Try both with and without memory: follow-ups ("and tomorrow?") only make sense with it,
@@ -340,9 +346,9 @@ func (u *ui) speak(mood, text string) {
 		}
 		q := text
 		if text != "" && bestConf < minConf {
-			// The network is unsure, so let it honestly say it doesn't know: ask a question from the
-			// topic it was trained to answer with "I don't know". Such answers are not remembered.
-			best, _ = u.brain.Reply(mood, nil, "кто президент сша", 0.7, rng)
+			// The network is unsure, so let it honestly say it doesn't know: the "unknown" mood was
+			// trained to produce exactly that. Such answers are not remembered.
+			best, _ = u.brain.Reply(lang+"/unknown", nil, "", 0.7, rng)
 			q = ""
 		}
 		u.replies <- reply{q: q, text: best}
@@ -354,7 +360,12 @@ func (u *ui) fill(s string) string {
 	now := time.Now()
 	days := []string{"воскресенье", "понедельник", "вторник", "среда", "четверг", "пятница", "суббота"}
 	months := []string{"января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"}
-	age := "меньше дня"
+	age, ageEn := "меньше дня", "less than a day"
+	if n := int(time.Since(u.born).Hours() / 24); n == 1 {
+		ageEn = "1 day"
+	} else if n > 1 {
+		ageEn = fmt.Sprintf("%d days", n)
+	}
 	switch n := int(time.Since(u.born).Hours() / 24); {
 	case n == 0:
 	case n%10 == 1 && n%100 != 11:
@@ -373,6 +384,14 @@ func (u *ui) fill(s string) string {
 		"{послезавтра}", days[(now.Weekday()+2)%7],
 		"{сытость}", fmt.Sprintf("%d%%", 100-int(u.pet.hunger)),
 		"{возраст}", age,
+		"{time_en}", strings.ToLower(now.Format("3:04 PM")),
+		"{date_en}", strings.ToLower(now.Format("January 2")),
+		"{day_en}", strings.ToLower(now.Weekday().String()),
+		"{yesterday_en}", strings.ToLower(now.AddDate(0, 0, -1).Weekday().String()),
+		"{tomorrow_en}", strings.ToLower(now.AddDate(0, 0, 1).Weekday().String()),
+		"{after_en}", strings.ToLower(now.AddDate(0, 0, 2).Weekday().String()),
+		"{hunger_en}", fmt.Sprintf("%d%%", 100-int(u.pet.hunger)),
+		"{age_en}", ageEn,
 	).Replace(s)
 	return strings.NewReplacer("{", "", "}", "").Replace(s) // in case the network left a template unfinished
 }
@@ -433,33 +452,45 @@ func (u *ui) updateBubble() {
 
 func onoff(b bool) string {
 	if b {
-		return "вкл"
+		return tr("on")
 	}
-	return "выкл"
+	return tr("off")
 }
 
 func (u *ui) openMenu() {
 	p := u.pet
 	full := int(math.Round((100 - p.hunger) / 20))
-	sleepLabel := "уложить спать"
+	sleepLabel := tr("sleep")
 	if p.st == stSleep {
-		sleepLabel = "разбудить"
+		sleepLabel = tr("wake")
+	}
+	langLabel := tr("auto")
+	if langSetting != "" {
+		langLabel = langSetting
 	}
 	u.items = []item{
-		{"сытость " + strings.Repeat("█", full) + strings.Repeat("░", 5-full), nil},
-		{fmt.Sprintf("возраст: %d дн.", int(time.Since(u.born).Hours()/24)), nil},
-		{"поговорить", func() { u.openInput(modeChat) }},
-		{"покормить ягодкой", func() { p.feed(); u.closePanel() }},
+		{tr("full") + strings.Repeat("█", full) + strings.Repeat("░", 5-full), nil},
+		{fmt.Sprintf(tr("age"), int(time.Since(u.born).Hours()/24)), nil},
+		{tr("talk"), func() { u.openInput(modeChat) }},
+		{tr("feed"), func() { p.feed(); u.closePanel() }},
 		{sleepLabel, func() { p.toggleSleep(); u.closePanel() }},
-		{"перерывы: " + onoff(p.breaks), func() { p.breaks = !p.breaks; u.openMenu() }},
-		{"автозапуск: " + onoff(autostartOn()), func() { _ = setAutostart(!autostartOn()); u.openMenu() }},
-		{"выход", u.quit},
+		{tr("breaks") + onoff(p.breaks), func() { p.breaks = !p.breaks; u.openMenu() }},
+		{tr("autostart") + onoff(autostartOn()), func() { _ = setAutostart(!autostartOn()); u.openMenu() }},
+		{tr("language") + langLabel, u.nextLang},
+		{tr("quit"), u.quit},
 	}
 	if u.mode != modeMenu {
 		u.hover = -1
 	}
 	u.mode = modeMenu
 	u.showPanel()
+}
+
+// nextLang cycles the language setting: system → ru → en → system.
+func (u *ui) nextLang() {
+	langSetting = map[string]string{"": "ru", "ru": "en", "en": ""}[langSetting]
+	saveState(u.pet, u.born)
+	u.openMenu()
 }
 
 func (u *ui) openInput(mode int) {
@@ -513,10 +544,10 @@ func (u *ui) drawPanel() {
 			pm.text(12, y+2, it.label, col)
 		}
 	case modeChat:
-		const hint = "enter - ок   esc - закрыть"
+		hint := tr("hint")
 		w := max(140, textW(hint)+12) // wide enough for the hint line
 		tw := w - 12
-		title := "напиши мансуру:"
+		title := tr("write")
 		text := string(u.input)
 		if (u.panelT/8)%2 == 0 {
 			text += "_"

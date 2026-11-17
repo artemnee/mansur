@@ -358,15 +358,18 @@ func (m *Model) forward(toks []int, a *acts) {
 // the lower it is, the more the network was guessing.
 func (m *Model) Reply(mood string, history []Turn, text string, temp float64, rng *rand.Rand) (reply string, conf float64) {
 	toks, _ := m.prompt(mood, history, text, 40)
-	a := m.newActs()
+	c := m.newCache()
+	var p []float32
+	for _, t := range toks {
+		p = m.push(c, t)
+	}
 	V := m.V()
+	w := make([]float64, V)
 	var out []rune
 	var logp float64
 	n := 0
-	for len(toks) < m.T {
-		m.forward(toks, a)
-		p := a.probs[(len(toks)-1)*V : len(toks)*V]
-		w := make([]float64, V)
+	for c.n < m.T {
+		clear(w)
 		var sum float64
 		for v := m.end(); v < V; v++ {
 			if v == m.turn() {
@@ -388,7 +391,9 @@ func (m *Model) Reply(mood string, history []Turn, text string, temp float64, rn
 			break
 		}
 		out = append(out, m.Chars[pick-m.base()])
-		toks = append(toks, pick)
+		if c.n < m.T {
+			p = m.push(c, pick)
+		}
 	}
 	return string(out), math.Exp(logp / float64(n))
 }

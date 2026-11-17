@@ -3,142 +3,116 @@
 </p>
 
 <p align="center">
-  <b>A pixel-art alien cat that lives above your Dock and talks through a tiny GPT written from scratch.</b><br>
-  Pure Go · no cgo · fully offline · the whole brain is 225 KB
+  <b>A pixel-art alien cat that lives above your Dock and chats in English and Russian<br>
+  through his own tiny GPT, written and trained from scratch.</b><br>
+  Fully offline · no API, no account · the whole brain is 490 KB
 </p>
 
 <p align="center">
-  <img alt="macOS 11+" src="https://img.shields.io/badge/macOS-11%2B-9cc75a?style=flat-square&logo=apple&logoColor=white">
-  <img alt="Go" src="https://img.shields.io/badge/Go-1.27%2B-9cc75a?style=flat-square&logo=go&logoColor=white">
-  <img alt="Brain" src="https://img.shields.io/badge/brain-215K%20params-9cc75a?style=flat-square">
-  <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-9cc75a?style=flat-square">
+  <a href="https://github.com/artemnee/mansur/releases/latest"><img alt="macOS 11+" src="https://img.shields.io/badge/macOS-11%2B-9cc75a?style=flat-square&logo=apple&logoColor=white"></a>
+  <a href="https://go.dev/dl/"><img alt="Go 1.27+" src="https://img.shields.io/badge/Go-1.27%2B-9cc75a?style=flat-square&logo=go&logoColor=white"></a>
+  <a href="#the-brain"><img alt="Brain: 470K params" src="https://img.shields.io/badge/brain-470K%20params-9cc75a?style=flat-square"></a>
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-9cc75a?style=flat-square"></a>
 </p>
 
 <p align="center">
   <img src="docs/demo.gif" alt="Mansur says hi, walks, gets petted, jumps, eats a berry and falls asleep" width="416">
 </p>
 
-> **Mansur speaks Russian.** His menu, speech bubbles and training dialogs are in Russian. English is on the roadmap.
-
----
-
 ## Install
 
-| | How | Best for |
-|---|---|---|
-| 🍎 **App** | Download `Mansur.dmg` from [Releases](https://github.com/artemnee/mansur/releases) | everyone |
-| 🐹 **Go** | `go install github.com/artemnee/mansur@latest` | developers |
-| 📦 **Binary** | one `curl` line, see below | terminal fans |
-
-<details>
-<summary><b>🍎 App (.dmg)</b></summary>
-
-1. Download `Mansur.dmg` from the [latest release](https://github.com/artemnee/mansur/releases/latest).
-2. Open it and drag **Mansur** into **Applications**.
-3. On the first launch macOS will say it cannot verify the developer: the app is not signed with a paid Apple certificate. Open **System Settings → Privacy & Security** and click **Open Anyway**. You only do this once.
-
-</details>
-
-<details>
-<summary><b>🐹 Go</b></summary>
-
-Requires [Go](https://go.dev/dl/) 1.27+. No Xcode, no cgo.
-
 ```sh
-go install github.com/artemnee/mansur@latest
-mansur
+curl -fsSL https://raw.githubusercontent.com/artemnee/mansur/main/install.sh | sh
 ```
 
-Builds from source on your machine, so macOS shows no warning.
-
-</details>
+Picks the build for your Mac, **verifies the checksum** and installs `mansur` to `~/.local/bin`. No `sudo`, no changes to your shell config. [Read the script](install.sh) first if you like.
 
 <details>
-<summary><b>📦 Binary</b></summary>
+<summary>Other ways: app, Go, manual download</summary>
 
-```sh
-# Apple Silicon
-curl -L https://github.com/artemnee/mansur/releases/latest/download/mansur-darwin-arm64.tar.gz | tar xz
-# Intel
-curl -L https://github.com/artemnee/mansur/releases/latest/download/mansur-darwin-amd64.tar.gz | tar xz
+**App:** download `Mansur.dmg` from [Releases](https://github.com/artemnee/mansur/releases/latest) and drag Mansur into Applications. The app is not signed with a paid Apple certificate, so on first launch open **System Settings → Privacy & Security → Open Anyway** once.
 
-./mansur
-```
+**Go 1.27+:** `go install github.com/artemnee/mansur@latest` (no Xcode, no cgo).
+
+**Manual:** download `mansur-darwin-arm64.tar.gz` (Apple Silicon) or `mansur-darwin-amd64.tar.gz` (Intel) from Releases, check it with `shasum -a 256 -c SHA256SUMS`, unpack and move `mansur` into your `PATH`.
+
+**Uninstall:** `mansur stop && rm ~/.local/bin/mansur` (his state lives in `~/Library/Application Support/mansur`).
 
 </details>
 
-## Usage
+## Use
 
 ```sh
-mansur                 # move in (runs in the background, the terminal stays free)
+mansur                 # move in (runs in the background)
 mansur stop            # say goodbye
-mansur status          # is he home?
-mansur autostart on    # start at login (off: mansur autostart off)
-mansur -size 6         # a bigger cat (default 4)
+mansur status
+mansur autostart on    # start at login
+mansur -size 6         # a bigger cat
 ```
-
-## What he does
-
-<p align="center">
-  <img src="docs/poses.png" alt="Mansur idle, being petted, jumping, eating and sleeping" width="640">
-</p>
 
 | You | Mansur |
 |---|---|
-| move the cursor over him | purrs, hearts fly |
+| hover over him | purrs, hearts fly |
 | click | jumps |
-| drag | dangles; let go and he lands on a window or the Dock |
-| right click | opens his menu |
-| nothing at all | strolls around his corner, follows your cursor, hops onto nearby windows, gets hungry |
-| work 50 minutes without a pause | reminds you to take a break |
-| stay up late | yawns and tells you to go to bed |
+| drag | dangles, then lands on a window or the Dock |
+| right click | menu: talk, feed, sleep, break reminders, autostart, language |
+| leave him be | strolls around his corner, follows the cursor, hops onto nearby windows, gets hungry |
+| work 50 min straight | reminds you to take a break |
+
+<p align="center">
+  <img src="docs/poses.png" alt="Idle, petted, jumping, eating, sleeping" width="640">
+</p>
 
 <table>
   <tr>
-    <td align="center"><img src="docs/menu.png" alt="Pixel menu" width="320"><br><sub>His menu</sub></td>
-    <td align="center"><img src="docs/chat.png" alt="Chatting with Mansur" width="400"><br><sub>Talk to him; he remembers the last exchange</sub></td>
+    <td align="center"><img src="docs/menu.png" alt="Pixel menu" width="300"><br><sub>His menu</sub></td>
+    <td align="center"><img src="docs/chat.png" alt="Chatting with Mansur" width="420"><br><sub>He replies in the language you write in</sub></td>
   </tr>
 </table>
 
 ## The brain
 
-Mansur's replies come from his own **decoder-only transformer** (the GPT-2 design), written from scratch in Go: forward pass, backpropagation, AdamW, int8 export and sampling. No ML libraries, no API, no internet.
+A decoder-only transformer (the GPT-2 design) written from scratch in Go. It runs inside the app on the CPU and answers in a fraction of a second.
 
 | | |
 |---|---|
-| Architecture | 4 layers · 4 attention heads · width 64 · context 128 characters |
-| Parameters | ~215K |
-| Weights | int8 in groups of 64, **~225 KB**, embedded in the binary |
-| Tokens | characters |
-| Memory | the previous exchange: "what day is it" → "and tomorrow?" |
-| Knowledge | writes `{время}`-style templates; the app fills in the real time, date, weekday, satiety and age |
-| Honesty | if the network is unsure, Mansur says he doesn't know instead of babbling |
+| Size | 4 layers, 4 heads, width 96, 128-character context, ~470K parameters, **490 KB** in int8 |
+| Languages | English and Russian; replies in the language of your message |
+| Knows | ~120 small-talk topics, his own moods, simple facts, adding numbers up to 10, the time and date |
+| Memory | the previous exchange: "what day is it?" → "and tomorrow?" |
+| Honesty | says "I don't know" when unsure |
+| Quality | 77% on 111 held-out questions, 100% in the right language ([`eval_test.go`](brain/eval_test.go)) |
 
-It learns from [`brain/dialogs.txt`](brain/dialogs.txt): human → Mansur pairs that depend on his mood (fine, hungry, sleepy). The trainer multiplies them with typos, colloquial forms and past-exchange memory.
+The network writes templates like `{time_en}`, and the app fills in the real time, date and weekday, so those answers are always correct.
+
+**Training data:** [`brain/dialogs.txt`](brain/dialogs.txt) (Russian) and [`brain/dialogs_en.txt`](brain/dialogs_en.txt) (English), expanded with paraphrases, typos and language switches by [`cmd/train`](cmd/train).
+
+**Training** runs on the Mac GPU with PyTorch (~25 s per epoch). It is only needed to retrain; the app itself is pure Go.
 
 ```sh
-go test ./brain                  # includes a numeric gradient check of the transformer
-go run ./cmd/train -epochs 60    # retrain from scratch (~30 min on a laptop CPU)
-make build                       # the new weights are embedded at build time
+go run ./cmd/train -dump training/data               # export tokenized samples
+uv venv training/.venv && uv pip install --python training/.venv/bin/python -r training/requirements.txt
+training/.venv/bin/python training/train.py           # writes training/out/weights.bin
+cp training/out/weights.bin brain/ && go test -v ./brain # quality report
 ```
 
-The network only knows the topics in `dialogs.txt`. Add a block there and retrain to teach it something new.
+## Privacy
 
-Runs locally. No API keys, accounts or internet connection required.
+- **No network** and no telemetry.
+- **No screen reading.** For climbing windows he reads only their positions, never contents or titles.
+- **No keyboard or clipboard access** except in his own input box.
+- His only files are `state.json` (satiety, settings) and a pid file, readable only by you.
 
-## Building from source
+Releases are built by [GitHub Actions](.github/workflows/release.yml) straight from a tagged commit and ship with `SHA256SUMS`.
+
+## Build
 
 ```sh
 make build   # bin/mansur
 make run     # run in the foreground
-make dmg     # dist/Mansur.dmg, universal (Apple Silicon + Intel)
-MANSUR_ASSETS=docs go test -run TestReadmeAssets .   # re-render the images in this README
+make dmg     # dist/Mansur.dmg (Apple Silicon + Intel)
+MANSUR_ASSETS=docs go test -run TestReadmeAssets .   # re-render these images
 ```
-
-## Roadmap
-
-- A smarter brain: a template data generator with hundreds of thousands of examples, a held-out test set, width 96.
-- English: replies in the language you write in, UI in your system language.
 
 ## License
 

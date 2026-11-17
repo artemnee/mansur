@@ -15,24 +15,9 @@ import (
 // AppKit only works on the main thread.
 func init() { runtime.LockOSThread() }
 
-const usage = `Мансур — пиксельный питомец в углу экрана.
-
-  mansur            поселить Мансура (уходит в фон, терминал свободен)
-  mansur stop       отпустить Мансура
-  mansur status     живёт ли сейчас
-  mansur autostart on|off   запускать при входе в систему
-
-Флаги:
-  -size N   размер пикселя, по умолчанию 4 (окно 32·N точек)
-  -fg       не уходить в фон
-
-С Мансуром: води курсором — гладишь, клик — прыгает,
-тащи мышкой — переносишь, правый клик — меню: поговорить, покормить,
-сон, перерывы, автозапуск, выход.
-`
-
 func main() {
-	flag.Usage = func() { fmt.Fprint(os.Stderr, usage) }
+	loadLang()
+	flag.Usage = func() { fmt.Fprint(os.Stderr, tr("usage")) }
 	size := flag.Float64("size", 4, "")
 	fg := flag.Bool("fg", false, "")
 	flag.Parse()
@@ -44,9 +29,9 @@ func main() {
 		return
 	case "status":
 		if pid, ok := running(); ok {
-			fmt.Printf("Мансур живёт (pid %d)\n", pid)
+			fmt.Printf(tr("alive"), pid)
 		} else {
-			fmt.Println("Мансура нет")
+			fmt.Println(tr("absent"))
 		}
 		return
 	case "autostart":
@@ -55,7 +40,7 @@ func main() {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
-		fmt.Println("автозапуск:", onoff(on))
+		fmt.Println(tr("autostart") + onoff(on))
 		return
 	case "icon":
 		// Internal command for make app: renders the icons for the .icns file.
@@ -70,7 +55,7 @@ func main() {
 	}
 
 	if pid, ok := running(); ok {
-		fmt.Printf("Мансур уже тут (pid %d). mansur stop — отпустить.\n", pid)
+		fmt.Printf(tr("already"), pid)
 		return
 	}
 
@@ -87,7 +72,7 @@ func main() {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
-		fmt.Println("Мансур поселился в углу экрана. mansur stop — отпустить.")
+		fmt.Println(tr("moved_in"))
 		return
 	}
 
@@ -141,7 +126,7 @@ func running() (int, bool) {
 func stop() {
 	pid, ok := running()
 	if !ok {
-		fmt.Println("Мансура и так нет")
+		fmt.Println(tr("not_here"))
 		return
 	}
 	if err := syscall.Kill(pid, syscall.SIGTERM); err != nil {
@@ -149,5 +134,5 @@ func stop() {
 		os.Exit(1)
 	}
 	_ = os.Remove(pidPath())
-	fmt.Println("Мансур ушёл спать к себе домой. Пока!")
+	fmt.Println(tr("bye"))
 }

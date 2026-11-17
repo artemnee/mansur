@@ -11,3 +11,9 @@ dist/
 
 # Local notes for Claude Code, not published.
 CLAUDE.md
+
+# Training: Python environment, exported samples and checkpoints are regenerated locally.
+training/.venv/
+training/data/
+training/out/
+training/train.log

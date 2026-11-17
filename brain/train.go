@@ -95,7 +95,15 @@ func (m *Model) backprop(toks []int, from int, a *acts, g *grads) (loss float64,
 }
 
 // Train trains the GPT from scratch (AdamW, cosine learning-rate decay).
-func Train(samples []Sample, cfg TrainConfig, extraChars string) *Model {
+// Seq is one tokenized example; the loss covers the predictions from position From on.
+type Seq struct {
+	Toks []int
+	From int
+}
+
+// Prepare builds the vocabulary from the samples and tokenizes them. The Go trainer and the
+// PyTorch trainer (fed by cmd/train -dump) both train on exactly these sequences.
+func Prepare(samples []Sample, cfg Config, extraChars string) (*Model, []Seq) {
 	var moods []string
 	set := map[rune]bool{}
 	for _, s := range samples {
@@ -119,8 +127,23 @@ func Train(samples []Sample, cfg TrainConfig, extraChars string) *Model {
 		chars = append(chars, r)
 	}
 	slices.Sort(chars)
+	m := newModel(cfg, moods, chars)
+	seqs := make([]Seq, len(samples))
+	for i, s := range samples {
+		ans := m.encode(s.A)
+		toks, from := m.prompt(s.Mood, s.History, s.Q, len(ans)+1)
+		toks = append(toks, ans...)
+		toks = append(toks, m.end())
+		if len(toks) > m.T+1 {
+			toks = toks[:m.T+1]
+		}
+		seqs[i] = Seq{toks, from}
+	}
+	return m, seqs
+}
 
-	m := newModel(cfg.Config, moods, chars)
+func Train(samples []Sample, cfg TrainConfig, extraChars string) *Model {
+	m, seqs := Prepare(samples, cfg.Config, extraChars)
 	rng := rand.New(rand.NewPCG(1, 2))
 	ones := func(p []float32) {
 		for j := range p {
@@ -142,29 +165,13 @@ func Train(samples []Sample, cfg TrainConfig, extraChars string) *Model {
 	ones(m.lnfw)
 	clear(m.lnfb)
 
-	type seq struct {
-		toks []int
-		from int
-	}
-	seqs := make([]seq, len(samples))
-	for i, s := range samples {
-		ans := m.encode(s.A)
-		toks, from := m.prompt(s.Mood, s.History, s.Q, len(ans)+1)
-		toks = append(toks, ans...)
-		toks = append(toks, m.end())
-		if len(toks) > m.T+1 {
-			toks = toks[:m.T+1]
-		}
-		seqs[i] = seq{toks, from}
-	}
-
 	workers := runtime.NumCPU()
 	gs := make([]*grads, workers)
 	as := make([]*acts, workers)
 	for i := range workers {
 		gs[i], as[i] = m.newGrads(), m.newActs()
 	}
-	total := newModel(m.Config, moods, chars)
+	total := newModel(m.Config, m.Moods, m.Chars)
 	opt := newAdam(m)
 	steps := cfg.Epochs * ((len(seqs) + cfg.Batch - 1) / cfg.Batch)
 	step := 0
@@ -185,7 +192,7 @@ func Train(samples []Sample, cfg TrainConfig, extraChars string) *Model {
 						clear(p)
 					}
 					for i := w; i < len(batch); i += workers {
-						l, c := m.backprop(batch[i].toks, batch[i].from, as[w], gs[w])
+						l, c := m.backprop(batch[i].Toks, batch[i].From, as[w], gs[w])
 						losses[w] += l
 						counts[w] += c
 					}

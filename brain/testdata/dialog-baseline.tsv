@@ -1,0 +1,38 @@
+
+который нынче час	{время}	nil
+время мне подскажешь	{время}	nil
+скока на часах	{время}	nil
+назови сегодняшнее число	{дата}	nil
+число сегодня подскажешь	{дата}	nil
+день недели подскажешь	{день}	nil
+как тебя зовут котик	мансур	nil
+напомни свое имя	мансур	nil
+а на завтра какой	{завтра}	day
+а если про вчера	{вчера}	day
+а через два дня	{послезавтра}	day
+как тебя зовут котик	мансур	day
+do you know what time it is	{time_en}	nil	en
+what is the time right now	{time_en}	nil	en
+what's the date today	{date_en}	nil	en
+what day of the week is it	{day_en}	nil	en
+may i know your name	mansur	nil	en
+what do people call you	mansur	nil	en
+how about tomorrow then	{tomorrow_en}	day_en	en
+and what was yesterday	{yesterday_en}	day_en	en
+and the day after that	{after_en}	day_en	en
+what is your name, kitty	mansur	day	en
+сколько сейчас времени скажи	{время}	day_en	ru
+как ты вообще	есть|голод|ягод|урчит|покорми|кушать	nil	ru	hungry
+мне так грустно сегодня	рядом|обнима|груст|хорошо|с тобой|погладь|отдох	nil	ru	ok
+чем ты там занят	сижу|охраня|думаю|отдыха|жду|смотрю	nil	ru	ok
+ты мне нравишься	♥|мур|смущ|лучш|люблю	nil	ru	ok
+	есть|ягод|корм|голод|обед|миск|еда|урчит|кушать	nil	ru	hungry
+	привет|скучал|тут|вернул|вместе|мансур|утро|начнем|выспался|дня|пришел	nil	ru	hello
+	знаю|понял|сложно|попроще	nil	ru	unknown
+how you doing	hungry|berry|tummy|feed	nil	en	hungry
+i'm feeling sad today	here|hug|sad|ok|pet|rest	nil	en	ok
+what are you busy with	watching|guarding|thinking|resting|waiting	nil	en	ok
+i really like you	♥|purr|blush|best|love	nil	en	ok
+	berry|hungry|feed|tummy|lunch|bowl|forget	nil	en	hungry
+	hi|hello|back|here|morning|missed|mansur|day	nil	en	hello
+	know|hard|simpler|didn't	nil	en	unknown
