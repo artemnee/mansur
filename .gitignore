@@ -1,0 +1,13 @@
+bin/
+dist/
+.DS_Store
+
+# Reference images in the root are third-party pictures; do not publish them.
+/*.jpg
+/*.jpeg
+/*.png
+/*.webp
+/*.avif
+
+# Local notes for Claude Code, not published.
+CLAUDE.md
