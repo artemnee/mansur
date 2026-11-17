@@ -124,31 +124,7 @@ make build                       # the new weights are embedded at build time
 
 The network only knows the topics in `dialogs.txt`. Add a block there and retrain to teach it something new.
 
-## Security
-
-Mansur is a desktop toy, so he asks for nothing and touches very little.
-
-- **No network.** There are no network calls in the code.
-- **No screen reading.** To climb windows he reads only their positions (`CGWindowListCopyWindowInfo`), never their contents or titles, so no Screen Recording permission is needed.
-- **No keyboard monitoring.** He receives key presses only while his own input box is open.
-- **No clipboard access**, except ⌘V in his input box.
-
-Files he writes, readable only by your user:
-
-| File | Contents |
-|---|---|
-| `~/Library/Application Support/mansur/state.json` | satiety, settings, birthday |
-| `~/Library/Caches/mansur/mansur.pid` | process id for `mansur stop` |
-| `~/Library/LaunchAgents/com.artemnee.mansur.plist` | only when autostart is on |
-
-**Verify a download.** Releases are built by GitHub Actions straight from a tagged commit ([`release.yml`](.github/workflows/release.yml)), and each file carries a build provenance attestation:
-
-```sh
-gh attestation verify Mansur.dmg --repo artemnee/mansur   # built by this repository
-shasum -a 256 -c SHA256SUMS                              # not corrupted
-```
-
-`brain/weights.bin` is data, not code: int8 numbers read by the ~100-line loader in [`brain/io.go`](brain/io.go). You can regenerate it yourself with `go run ./cmd/train`.
+Runs locally. No API keys, accounts or internet connection required.
 
 ## Building from source
 
