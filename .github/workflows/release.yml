@@ -33,6 +33,7 @@ jobs:
           cd dist && shasum -a 256 Mansur.dmg mansur-darwin-*.tar.gz > SHA256SUMS
 
       - uses: actions/attest-build-provenance@v2
+        if: ${{ !github.event.repository.private }}
         with:
           subject-path: |
             dist/Mansur.dmg
