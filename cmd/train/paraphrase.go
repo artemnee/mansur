@@ -113,3 +113,32 @@ func normalizeQ(q string) string {
 	}
 	return strings.Trim(q, "!?., ")
 }
+
+// Names for "my name is …" examples. The network must not copy the name: it answers with the
+// {имя} / {name_en} template, and the app remembers the real name itself.
+var sampleNames = []string{"петя", "маша", "саша", "дима", "катя", "никита", "оля", "ваня", "аня", "миша", "лена", "гоша",
+	"alex", "sam", "kate", "john", "emma", "max", "lily", "tom", "anna", "mike", "nick", "eva"}
+
+var intro = map[string]struct{ frames, answers []string }{
+	"ru": {[]string{"меня зовут %", "зови меня %", "мое имя %", "привет, меня зовут %", "кстати, меня зовут %", "а меня зовут %", "можешь звать меня %"},
+		[]string{"приятно познакомиться, {имя}!", "очень приятно, {имя} ♥", "запомнил, {имя}!", "привет, {имя}!"}},
+	"en": {[]string{"my name is %", "call me %", "hi, my name is %", "my name's %", "btw my name is %", "you can call me %"},
+		[]string{"nice to meet you, {name_en}!", "got it, {name_en}!", "hi, {name_en} ♥", "i'll remember, {name_en}!"}},
+}
+
+// introSamples teaches "меня зовут …" / "my name is …" with many different names.
+func introSamples(rng *rand.Rand) []brain.Sample {
+	pick := func(s []string) string { return s[rng.IntN(len(s))] }
+	var out []brain.Sample
+	for lang, in := range intro {
+		st := ruStyle
+		if lang == "en" {
+			st = enStyle
+		}
+		for range 600 {
+			q := strings.Replace(pick(in.frames), "%", pick(sampleNames), 1)
+			out = append(out, brain.Sample{Mood: lang + "/" + pick(chatMoods), Q: st.noise(q, rng), A: pick(in.answers)})
+		}
+	}
+	return out
+}

@@ -20,6 +20,10 @@ const (
 	stEat
 	stSurprised
 	stClimb
+	stYawn    // eyes shut, mouth wide open
+	stStretch // after waking up, and sometimes just because
+	stGroom   // licks a paw
+	stChase   // runs after a fast-moving cursor and pounces
 )
 
 const (
@@ -64,6 +68,11 @@ type Pet struct {
 	home               float64 // he wanders around this point; moves when Mansur is dragged
 	climbFrom, climbTo NSPoint
 
+	bond  *bond // what he remembers about the human and how he feels about them
+	sulky bool  // offended: looks away from the cursor and grumbles
+
+	woke bool // just woken up: stretches next
+
 	saying   string // the mood Mansur wants to talk about
 	sayCD    int
 	night    bool
@@ -73,7 +82,7 @@ type Pet struct {
 }
 
 func newPet(scale float64, area NSRect) *Pet {
-	p := &Pet{scale: scale, size: cw * scale, dir: -1, blinkIn: 60, hunger: 30, breaks: true}
+	p := &Pet{scale: scale, size: cw * scale, dir: -1, blinkIn: 60, hunger: 30, breaks: true, bond: newBond()}
 	p.x = area.Origin.X + area.Size.W - p.size - 24
 	p.y = area.Origin.Y
 	p.home = p.x
@@ -100,6 +109,8 @@ func (p *Pet) say(mood string, chance float64) {
 
 func (p *Pet) chatMood() string {
 	switch {
+	case p.sulky:
+		return "sulk"
 	case p.night:
 		return "night"
 	case p.hunger > 70:
@@ -194,11 +205,16 @@ func (p *Pet) update(m NSPoint, area NSRect) {
 		p.sayCD--
 	}
 
-	moved := math.Hypot(m.X-p.mouse.X, m.Y-p.mouse.Y) > 0.5
+	speed := math.Hypot(m.X-p.mouse.X, m.Y-p.mouse.Y)
+	moved := speed > 0.5
 	p.mouse = m
 	if moved {
+		if p.t-p.lastMove > tps*60*10/fast && p.st != stSleep { // the human is back after a break
+			p.say("back", 0.7)
+		}
 		p.lastMove = p.t
 	}
+	p.sulky = p.bond.sulky()
 	// Break reminder: 50 minutes at the computer in a row (a pause of 5+ minutes resets the count).
 	if p.t-p.lastMove < tps*60*5 {
 		p.workT++
@@ -221,6 +237,11 @@ func (p *Pet) update(m NSPoint, area NSRect) {
 	if p.petT >= 4 {
 		p.calm = 0
 		p.happyT = 15
+		if p.t%tps == 0 { // once a second of petting
+			for range fast {
+				p.bond.petted()
+			}
+		}
 		if p.st == stIdle || p.st == stWalk {
 			p.set(stHappy)
 			p.say("pet", 0.5)
@@ -229,6 +250,9 @@ func (p *Pet) update(m NSPoint, area NSRect) {
 
 	if dx := m.X - (p.x + p.size/2); math.Abs(dx) < 400 && math.Abs(dx) > p.size/4 {
 		p.look = int(math.Copysign(1, dx))
+		if p.sulky {
+			p.look = -p.look // turns away from you
+		}
 	} else {
 		p.look = 0
 	}
@@ -249,6 +273,13 @@ func (p *Pet) update(m NSPoint, area NSRect) {
 	ground, minX, maxX := p.walkArea(area)
 	onWindow := ground > area.Origin.Y
 
+	// A cursor darting around nearby is prey.
+	if dx, dy := m.X-(p.x+p.size/2), m.Y-(p.y+p.size/2); !p.sulky && speed > 12 && math.Abs(dx) < 250 &&
+		math.Abs(dx) > p.size/2 && math.Abs(dy) < 200 && (p.st == stIdle || p.st == stWalk) && rand.Float64() < 0.04 {
+		p.dir = int(math.Copysign(1, dx))
+		p.set(stChase)
+	}
+
 	switch p.st {
 	case stIdle:
 		sleepAfter := tps * 60 * 3
@@ -260,25 +291,43 @@ func (p *Pet) update(m NSPoint, area NSRect) {
 			p.say("sleep", 0.7)
 			break
 		}
-		if p.hunger > 70 && p.bubbleT == 0 && rand.IntN(tps*15) == 0 {
+		if p.hunger > 70-25*p.bond.Greedy && p.bubbleT == 0 && rand.IntN(tps*15) == 0 {
 			p.bubbleT = tps * 3
 			p.say("hungry", 0.6)
 		}
 		if p.night && rand.IntN(tps*60*20) == 0 {
 			p.say("night", 1)
 		}
-		if rand.IntN(tps*150) == 0 {
-			p.say("idle", 1)
+		if rand.IntN(int(tps*150*(1-0.6*p.bond.Chatty))) == 0 { // a chatty cat talks more
+			if p.sulky {
+				p.say("sulk", 1)
+			} else {
+				p.say("idle", 1)
+			}
 		}
 		if p.stT > p.stDur {
+			b := p.bond
+			climb, walk := 15+int(15*b.Independent), 65+int(20*b.Independent)
+			toCursor := m.X - (p.x + p.size/2)
 			switch r := rand.IntN(100); {
-			case r < 15 && !onWindow && p.tryClimb(area):
-			case r < 25 && onWindow:
+			case !p.sulky && math.Abs(toCursor) < 300 && math.Abs(toCursor) > p.size/2 && rand.Float64() < b.Cuddly:
+				// A cuddly cat comes to the cursor.
+				p.dir = int(math.Copysign(1, toCursor))
+				p.set(stWalk)
+				p.say("clingy", 0.3)
+			case r < climb && !onWindow && p.tryClimb(area):
+			case r < climb+10 && onWindow:
 				fy, _, _ := p.surface(area, p.x, p.y-3)
 				p.startClimb(p.x, fy)
-			case r < 65:
+			case r < walk:
 				p.dir = []int{-1, 1}[rand.IntN(2)]
 				p.set(stWalk)
+			case r < walk+4 || (p.night || p.calm > tps*60) && r < walk+10:
+				p.set(stYawn)
+			case r < walk+8:
+				p.set(stGroom)
+			case r < walk+10:
+				p.set(stStretch)
 			default:
 				p.set(stIdle)
 			}
@@ -350,7 +399,32 @@ func (p *Pet) update(m NSPoint, area NSRect) {
 		}
 	case stSurprised:
 		if p.stT >= 12 {
+			if p.woke {
+				p.woke = false
+				p.set(stStretch)
+			} else {
+				p.set(stIdle)
+			}
+		}
+	case stYawn:
+		if p.stT >= 30 {
 			p.set(stIdle)
+		}
+	case stStretch:
+		if p.stT >= 40 {
+			p.set(stIdle)
+		}
+	case stGroom:
+		if p.stT >= 80 {
+			p.set(stIdle)
+		}
+	case stChase:
+		dx := m.X - (p.x + p.size/2)
+		p.dir = int(math.Copysign(1, dx))
+		p.x += float64(p.dir) * p.scale
+		if math.Abs(dx) < p.size/3 || p.stT > tps*3 || p.x <= minX || p.x >= maxX {
+			p.jump() // pounce
+			p.say("jump", 0.3)
 		}
 	}
 
@@ -382,6 +456,7 @@ func (p *Pet) click() {
 	switch p.st {
 	case stSleep:
 		p.spawn(pBang, 25, 6)
+		p.woke = true
 		p.set(stSurprised)
 		p.sayCD = 0
 		p.say("wake", 1)
@@ -408,13 +483,14 @@ func (p *Pet) drop() {
 
 func (p *Pet) feed() {
 	p.calm, p.lift = 0, 0
+	p.bond.fed()
 	p.set(stEat)
 }
 
 func (p *Pet) toggleSleep() {
 	p.calm = 0
 	if p.st == stSleep {
-		p.set(stIdle)
+		p.set(stStretch)
 	} else {
 		p.lift = 0
 		p.set(stSleep)
@@ -424,6 +500,7 @@ func (p *Pet) toggleSleep() {
 // listen is called when the human writes something: he wakes up and looks.
 func (p *Pet) listen() {
 	p.calm = 0
+	p.bond.chatted()
 	if p.st == stSleep {
 		p.set(stSurprised)
 	}
@@ -469,6 +546,30 @@ func (p *Pet) pose() pose {
 		}
 	case stSurprised:
 		ps.body, ps.eyes, ps.mouth = bodySit, eyeWide, mouthO
+	case stYawn:
+		ps.body, ps.eyes, ps.mouth, ps.look = bodySit, eyeClosed, mouthO, 0
+		if p.stT > 8 && p.stT < 22 {
+			ps.squash = -1 // the big moment of the yawn
+		}
+	case stStretch:
+		ps.eyes, ps.mouth = eyeClosed, mouthFlat
+		switch {
+		case p.stT < 12:
+			ps.squash = 2 // front down
+		case p.stT < 28:
+			ps.squash, ps.mouth = -1, mouthO // all the way up
+		}
+	case stGroom:
+		ps.body, ps.look = bodySit, 0
+		ps.paw = 1 + (p.stT/6)%2
+		if (p.stT/12)%2 == 0 {
+			ps.eyes = eyeClosed
+		}
+	case stChase:
+		ps.look, ps.eyes = p.dir, eyeWide
+		step := (p.t / 2) % 2
+		ps.feet = feetStepL + feet(step)
+		ps.lift += step
 	}
 	if p.land > 0 {
 		ps.squash = 2

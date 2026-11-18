@@ -21,6 +21,12 @@
 
 ## Install
 
+<p align="center">
+  <a href="https://github.com/artemnee/mansur/releases/latest/download/Mansur.dmg"><img alt="Download for macOS" src="https://img.shields.io/badge/Download_for_macOS-.dmg-9cc75a?style=for-the-badge&logo=apple&logoColor=white"></a>
+</p>
+
+Or from the terminal:
+
 ```sh
 curl -fsSL https://raw.githubusercontent.com/artemnee/mansur/main/install.sh | sh
 ```
@@ -30,7 +36,7 @@ Picks the build for your Mac, **verifies the checksum** and installs `mansur` to
 <details>
 <summary>Other ways: app, Go, manual download</summary>
 
-**App:** download `Mansur.dmg` from [Releases](https://github.com/artemnee/mansur/releases/latest) and drag Mansur into Applications. The app is not signed with a paid Apple certificate, so on first launch open **System Settings → Privacy & Security → Open Anyway** once.
+**App:** open the downloaded `Mansur.dmg` and drag Mansur into Applications. The app is not signed with a paid Apple certificate, so on first launch open **System Settings → Privacy & Security → Open Anyway** once.
 
 **Go 1.27+:** `go install github.com/artemnee/mansur@latest` (no Xcode, no cgo).
 
@@ -56,8 +62,14 @@ mansur -size 6         # a bigger cat
 | click | jumps |
 | drag | dangles, then lands on a window or the Dock |
 | right click | menu: talk, feed, sleep, break reminders, autostart, language |
-| leave him be | strolls around his corner, follows the cursor, hops onto nearby windows, gets hungry |
+| leave him be | strolls around his corner, follows the cursor, hops onto nearby windows, yawns, stretches, grooms, gets hungry |
+| dart the cursor around him | hunts it and pounces |
 | work 50 min straight | reminds you to take a break |
+| tell him "my name is …" | remembers it and greets you by name |
+| come back after a while | "you're back!", or "I missed you" after a few days |
+| ignore him for hours | sulks, turns away and grumbles until you pet him |
+
+**His character grows from how you treat him:** pet him a lot and he gets cuddly and comes to your cursor; feed him often and he gets greedy; talk to him and he gets chatty; leave him alone and he becomes independent. The menu shows what he has become.
 
 <p align="center">
   <img src="docs/poses.png" alt="Idle, petted, jumping, eating, sleeping" width="640">
@@ -81,7 +93,7 @@ A decoder-only transformer (the GPT-2 design) written from scratch in Go. It run
 | Knows | ~120 small-talk topics, his own moods, simple facts, adding numbers up to 10, the time and date |
 | Memory | the previous exchange: "what day is it?" → "and tomorrow?" |
 | Honesty | says "I don't know" when unsure |
-| Quality | 77% on 111 held-out questions, 100% in the right language ([`eval_test.go`](brain/eval_test.go)) |
+| Quality | 89% on 159 held-out questions, 100% in the right language ([`eval_test.go`](brain/eval_test.go)) |
 
 The network writes templates like `{time_en}`, and the app fills in the real time, date and weekday, so those answers are always correct.
 
@@ -101,7 +113,7 @@ cp training/out/weights.bin brain/ && go test -v ./brain # quality report
 - **No network** and no telemetry.
 - **No screen reading.** For climbing windows he reads only their positions, never contents or titles.
 - **No keyboard or clipboard access** except in his own input box.
-- His only files are `state.json` (satiety, settings) and a pid file, readable only by you.
+- His only files are `state.json` and a pid file, readable only by you. `state.json` holds his satiety and settings, your name if you told him, the hours you are usually around and his character. Delete it and he starts fresh.
 
 Releases are built by [GitHub Actions](.github/workflows/release.yml) straight from a tagged commit and ship with `SHA256SUMS`.
 

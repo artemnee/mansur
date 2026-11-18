@@ -168,6 +168,18 @@ func drawCat(c *canvas, p pose) face {
 
 	s.paint(c, catLine)
 	f := drawFace(c, p, hx, hy)
+	if p.paw > 0 { // licking a paw: a small paw in front of the muzzle
+		var paw shape
+		x0, y0 := hx+3, hy+8-p.paw
+		for dy := range 2 {
+			for dx := range 3 {
+				paw.set(x0+dx, y0+dy, catBody)
+			}
+		}
+		paw.set(x0, y0+1, catMask)
+		paw.set(x0+2, y0+1, catMask)
+		paw.paint(c, catLine)
+	}
 
 	if p.look > 0 { // looking right: mirror the sprite
 		for y := range ch {

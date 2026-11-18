@@ -218,6 +218,8 @@ func demoGIF(path string) error {
 		{stHappy, 40, "purr ♥"},
 		{stJump, 12, "hop!"},
 		{stEat, 60, "nom nom!"},
+		{stGroom, 40, ""},
+		{stYawn, 30, ""},
 		{stSleep, 60, ""},
 	}
 	const W, H, scale = 104, 64, 4

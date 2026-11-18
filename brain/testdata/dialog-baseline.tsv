@@ -36,3 +36,19 @@ i really like you	♥|purr|blush|best|love	nil	en	ok
 	berry|hungry|feed|tummy|lunch|bowl|forget	nil	en	hungry
 	hi|hello|back|here|morning|missed|mansur|day	nil	en	hello
 	know|hard|simpler|didn't	nil	en	unknown
+	вернул|ждал|наконец|возвращ|снова|где ты	nil	ru	back
+	скучал|долго|пропадал|забыл|наконец	nil	ru	missed
+	рано|утро|пташка	nil	ru	early
+	хм|обиделся|не разговар|забыл|пф|прощу|вообще-то	nil	ru	sulk
+	к тебе|с тобой|рядом|погладь|тут|уходи	nil	ru	clingy
+слушай, меня зовут гриша	{имя}	nil	ru	ok
+ты помнишь мое имя?	{имя}	nil	ru	ok
+	back|waiting|finally|welcome|again|where	nil	en	back
+	missed|long|where|forgot|finally	nil	en	missed
+	early|morning|bird	nil	en	early
+	hmph|offended|not talking|forgot|pff|forgive|you know	nil	en	sulk
+	coming|along|here|pet me|leave	nil	en	clingy
+well, my name is peter	{name_en}	nil	en	ok
+can you remember my name	{name_en}	nil	en	ok
+здравствуй, котик	хм|это ты|обижен|явился	nil	ru	sulk
+hello there kitty	hmph|it's you|offended|look who	nil	en	sulk

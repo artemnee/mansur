@@ -1,4 +1,4 @@
-// Package brain is a tiny GPT (a decoder-only transformer, ~200K parameters)
+// Package brain is a tiny GPT (a decoder-only transformer, ~470K parameters)
 // written from scratch: forward and backward pass, training, generation.
 //
 // Character-level sequence, with memory of past exchanges:

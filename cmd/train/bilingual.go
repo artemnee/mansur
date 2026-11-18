@@ -95,7 +95,8 @@ func bilingualSamples(ru, en []*block, rng *rand.Rand, reserved map[string]bool)
 	switchHistory(ruS, enS)
 	switchHistory(enS, ruS)
 
-	out := dropReserved(append(append(ruS, enS...), knowledgeSamples(rng, reserved)...), reserved)
+	out := append(append(ruS, enS...), knowledgeSamples(rng, reserved)...)
+	out = dropReserved(append(out, introSamples(rng)...), reserved)
 	rng.Shuffle(len(out), func(i, j int) { out[i], out[j] = out[j], out[i] })
 	return out
 }

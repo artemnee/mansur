@@ -23,7 +23,7 @@ import (
 	"github.com/artemnee/mansur/brain"
 )
 
-var chatMoods = []string{"ok", "hungry", "night"}
+var chatMoods = []string{"ok", "hungry", "night", "sulk"}
 
 // Characters the human may type even if they never appear in the dialogs.
 const extraChars = "абвгдежзийклмнопрстуфхцчшщъыьэюяabcdefghijklmnopqrstuvwxyz0123456789 .,!?-:()'\"♥+*/="

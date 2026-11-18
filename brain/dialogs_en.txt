@@ -1058,3 +1058,146 @@
 < that's too hard for me
 < ask something simpler?
 < i'm small, i don't know
+
+# Character moods: the app picks them from how the human treats Mansur.
+# {name_en} is the human's name, or "friend" if Mansur doesn't know it yet.
+
+@say hello
+< hi, {name_en}!
+< {name_en}, you're here!
+< oh, {name_en} is here!
+
+@say back
+< you're back!
+< oh, {name_en}, you're back!
+< i was waiting for you!
+< finally!
+< welcome back, {name_en}!
+< where were you?
+< yay, you're here again!
+
+@say missed
+< i missed you so much!
+< {name_en}, you were gone so long!
+< where have you been?
+< i thought you forgot me...
+< finally you came!
+< i missed you, {name_en} ♥
+
+@say early
+< you're early today!
+< wow, so early?
+< good morning, {name_en}! a bit early
+< early bird today
+< up early, {name_en}?
+
+@say sulk
+< hmph.
+< i'm offended
+< not talking to you
+< you forgot about me...
+< i'm right here, you know
+< pff.
+< pet me and i'll forgive you
+
+@say clingy
+< coming to you!
+< can i come along?
+< i'm right here, {name_en}
+< pet me, {name_en}
+< purr, i'm here
+< don't leave
+
+@my_name_q
+> what's my name
+> do you remember my name
+> what is my name
+> who am i
+> do you know my name
+< your name is {name_en}!
+< you're {name_en}!
+< of course, {name_en}
+
+# Chat while sulking (mood sulk: ignored for hours).
+
+@greet sulk
+> hi
+> hello
+> hey
+> hey there
+< hmph. hi.
+< oh, it's you.
+< hi... i'm offended
+< look who's here.
+
+@howareyou sulk
+> how are you
+> how are you doing
+> how's it going
+> you ok
+< bad. you left me
+< hmph. fine.
+< i'm offended
+< it was boring without you
+
+@love sulk
+> i love you
+> you're cute
+> you're the best
+> love you
+< okay... i forgive you ♥
+< really? purr...
+< hmph. fine
+< then pet me
+
+@sorry sulk
+> sorry
+> i'm sorry
+> my bad
+< okay, forgiven ♥
+< pet me and i'll forgive you
+< hmm... alright
+
+@what_doing sulk
+> what are you doing
+> whatcha doing
+> what are you up to
+< sulking
+< sitting alone
+< waiting for pets
+
+# More ways to say the common small talk.
+
+@what_doing
+> what are you doing right now
+> what are you up to today
+> are you busy
+> what's keeping you busy
+> what are you doing there
+
+@love
+> i like you
+> i like you a lot
+> you're so sweet
+> you're lovely
+> such a good cat
+> love you kitty
+
+@howareyou
+> how are you today
+> how's your day
+> how's your mood
+> everything ok with you
+> how are you feeling
+
+@me_bad
+> i'm sad today
+> i feel so sad
+> bad mood today
+> i'm not okay
+> today is a bad day
+
+@food
+> do you want some food
+> are you hungry kitty
+> want something to eat

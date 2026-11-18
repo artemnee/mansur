@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"slices"
 	"strings"
 	"syscall"
 	"time"
@@ -206,6 +207,8 @@ type ui struct {
 	born   time.Time
 	sig    chan os.Signal
 	keys   map[string]objc.ID
+	timer  objc.ID
+	slow   bool // ticking at 1/slowSteps rate while nothing happens
 	onQuit func()
 }
 
@@ -280,22 +283,71 @@ func (u *ui) tick() {
 	}
 
 	p := u.pet
-	if p.t%tps == 0 {
-		u.scanWindows()
-		h := time.Now().Hour()
-		p.night = h >= 23 || h < 5
+	steps := 1
+	if u.slow {
+		steps = slowSteps
 	}
-	if p.t%(tps*60) == 0 {
-		saveState(p, u.born)
-	}
-	p.update(mouseLoc(), u.area())
-	if p.saying != "" && !u.thinking {
-		u.speak(p.saying, "")
-		p.saying = ""
+	m, area := mouseLoc(), u.area()
+	for range steps {
+		if p.t%tps == 0 {
+			h := time.Now().Hour()
+			p.night = h >= 23 || h < 5
+		}
+		if p.t%(tps*5) == 0 {
+			u.scanWindows()
+		}
+		if minute := tps * 60 / fast; p.t%minute == 0 && p.t > 0 {
+			p.bond.minute(time.Now(), p.t-p.lastMove < minute, p.calm > minute*30)
+			saveState(p, u.born)
+			if fast > 1 {
+				b := p.bond
+				fmt.Printf("affection %.2f  cuddly %.2f  greedy %.2f  independent %.2f  chatty %.2f  sulky %v\n",
+					b.Affection, b.Cuddly, b.Greedy, b.Independent, b.Chatty, b.sulky())
+			}
+		}
+		p.update(m, area)
+		if p.saying != "" && !u.thinking {
+			u.speak(p.saying, "")
+			p.saying = ""
+		}
 	}
 	u.syncPet()
 	u.updateBubble()
 	u.updatePanel()
+	u.setSlow(u.quiet(m))
+}
+
+// slowSteps: when nothing is happening the timer fires this many times less often, and each
+// firing runs that many logic steps, so the pet lives at the same speed while the Mac wakes up less.
+const slowSteps = 4
+
+// quiet: Mansur sits or sleeps, nothing is on screen around him and the cursor is far away.
+func (u *ui) quiet(m NSPoint) bool {
+	p := u.pet
+	near := math.Abs(m.X-(p.x+p.size/2)) < 300 && math.Abs(m.Y-(p.y+p.size/2)) < 300
+	return (p.st == stIdle || p.st == stSleep) && len(p.parts) == 0 && p.land == 0 && p.bubbleT == 0 &&
+		u.bubble == nil && u.mode == modeNone && !u.thinking && p.saying == "" && !near
+}
+
+func (u *ui) setSlow(slow bool) {
+	if slow != u.slow || u.timer == 0 {
+		u.slow = slow
+		u.startTimer()
+	}
+}
+
+func (u *ui) startTimer() {
+	if u.timer != 0 {
+		u.timer.Send(sel("invalidate"))
+	}
+	interval, tolerance := 1.0/float64(tps), 0.01
+	if u.slow {
+		interval, tolerance = slowSteps/float64(tps), 0.05
+	}
+	u.timer = cls("NSTimer").Send(sel("timerWithTimeInterval:target:selector:userInfo:repeats:"),
+		interval, u.petS.view, sel("tick:"), objc.ID(0), true)
+	u.timer.Send(sel("setTolerance:"), tolerance)
+	cls("NSRunLoop").Send(sel("currentRunLoop")).Send(sel("addTimer:forMode:"), u.timer, nsStr("kCFRunLoopCommonModes"))
 }
 
 func (u *ui) syncPet() {
@@ -360,6 +412,12 @@ func (u *ui) fill(s string) string {
 	now := time.Now()
 	days := []string{"воскресенье", "понедельник", "вторник", "среда", "четверг", "пятница", "суббота"}
 	months := []string{"января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"}
+	name := func(fallback string) string {
+		if n := u.pet.bond.Name; n != "" {
+			return strings.ToLower(n) // the brain writes in lower case; the font is upper case anyway
+		}
+		return fallback
+	}
 	age, ageEn := "меньше дня", "less than a day"
 	if n := int(time.Since(u.born).Hours() / 24); n == 1 {
 		ageEn = "1 day"
@@ -384,6 +442,8 @@ func (u *ui) fill(s string) string {
 		"{послезавтра}", days[(now.Weekday()+2)%7],
 		"{сытость}", fmt.Sprintf("%d%%", 100-int(u.pet.hunger)),
 		"{возраст}", age,
+		"{имя}", name("человек"),
+		"{name_en}", name("friend"),
 		"{time_en}", strings.ToLower(now.Format("3:04 PM")),
 		"{date_en}", strings.ToLower(now.Format("January 2")),
 		"{day_en}", strings.ToLower(now.Weekday().String()),
@@ -464,6 +524,13 @@ func (u *ui) openMenu() {
 	if p.st == stSleep {
 		sleepLabel = tr("wake")
 	}
+	var about []item // what he knows about you and what he became
+	if n := p.bond.Name; n != "" {
+		about = append(about, item{tr("friend") + n, nil})
+	}
+	if t := p.bond.trait(); t != "" {
+		about = append(about, item{tr("trait") + tr(t), nil})
+	}
 	langLabel := tr("auto")
 	if langSetting != "" {
 		langLabel = langSetting
@@ -479,6 +546,7 @@ func (u *ui) openMenu() {
 		{tr("language") + langLabel, u.nextLang},
 		{tr("quit"), u.quit},
 	}
+	u.items = slices.Insert(u.items, 2, about...)
 	if u.mode != modeMenu {
 		u.hover = -1
 	}
@@ -678,6 +746,10 @@ func (u *ui) submit() {
 	if text == "" {
 		return
 	}
+	if n := parseName(text); n != "" {
+		u.pet.bond.Name = n
+		saveState(u.pet, u.born)
+	}
 	u.pet.listen()
 	u.speak(u.pet.chatMood(), strings.ToLower(text))
 	u.input = nil
@@ -711,6 +783,7 @@ func (u *ui) mouseDragged() {
 
 func (u *ui) mouseUp() {
 	if u.dragging {
+		u.scanWindows() // fresh window edges to land on
 		u.pet.drop()
 	} else {
 		u.pet.click()
@@ -792,12 +865,10 @@ func runApp(scale float64, onQuit func()) {
 
 	u.syncPet()
 	u.petS.show()
-	pet.say("hello", 1)
+	pet.say(pet.bond.greeting(time.Now()), 1)
+	pet.bond.LastSeen = time.Now()
 
-	timer := cls("NSTimer").Send(sel("timerWithTimeInterval:target:selector:userInfo:repeats:"),
-		1.0/float64(tps), u.petS.view, sel("tick:"), objc.ID(0), true)
-	timer.Send(sel("setTolerance:"), 0.01)
-	cls("NSRunLoop").Send(sel("currentRunLoop")).Send(sel("addTimer:forMode:"), timer, nsStr("kCFRunLoopCommonModes"))
+	u.startTimer()
 
 	pool.Send(sel("drain"))
 	app.Send(sel("run"))

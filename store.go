@@ -15,6 +15,7 @@ type saved struct {
 	Hunger float64   `json:"hunger"`
 	Breaks bool      `json:"breaks"`
 	Lang   string    `json:"lang,omitempty"` // "" follows the system language
+	Bond   *bond     `json:"bond,omitempty"`
 	Born   time.Time `json:"born"`
 	At     time.Time `json:"at"`
 }
@@ -35,6 +36,9 @@ func loadState(p *Pet) time.Time {
 	p.hunger = min(100, s.Hunger+away*100/90)
 	p.breaks = s.Breaks
 	langSetting = s.Lang
+	if s.Bond != nil {
+		p.bond = s.Bond
+	}
 	return s.Born
 }
 
@@ -47,7 +51,7 @@ func loadLang() {
 }
 
 func saveState(p *Pet, born time.Time) {
-	b, _ := json.MarshalIndent(saved{Hunger: p.hunger, Breaks: p.breaks, Lang: langSetting, Born: born, At: time.Now()}, "", "  ")
+	b, _ := json.MarshalIndent(saved{Hunger: p.hunger, Breaks: p.breaks, Lang: langSetting, Bond: p.bond, Born: born, At: time.Now()}, "", "  ")
 	_ = os.MkdirAll(filepath.Dir(statePath()), 0o700)
 	_ = os.WriteFile(statePath(), b, 0o600)
 }

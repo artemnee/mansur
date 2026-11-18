@@ -71,6 +71,7 @@ type pose struct {
 	look   int // -1 left, 1 right
 	feet   feet
 	t      int // time, for shape animations
+	paw    int // >0: a front paw raised to the face (grooming), the value is its height
 }
 
 type canvas [cw * ch]rgba
