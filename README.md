@@ -5,7 +5,7 @@
 <p align="center">
   <b>A pixel-art alien cat that lives above your Dock and chats in English and Russian<br>
   through his own tiny GPT, written and trained from scratch.</b><br>
-  Fully offline · no API, no account · the whole brain is 490 KB
+  Runs locally · no API, no account · the whole brain is 490 KB
 </p>
 
 <p align="center">
@@ -33,6 +33,8 @@ curl -fsSL https://raw.githubusercontent.com/artemnee/mansur/main/install.sh | s
 
 Picks the build for your Mac, **verifies the checksum** and installs `mansur` to `~/.local/bin`. No `sudo`, no changes to your shell config. [Read the script](install.sh) first if you like.
 
+Releases are built by [GitHub Actions](.github/workflows/release.yml) from a tagged commit and ship with `SHA256SUMS`.
+
 <details>
 <summary>Other ways: app, Go, manual download</summary>
 
@@ -42,11 +44,11 @@ Picks the build for your Mac, **verifies the checksum** and installs `mansur` to
 
 **Manual:** download `mansur-darwin-arm64.tar.gz` (Apple Silicon) or `mansur-darwin-amd64.tar.gz` (Intel) from Releases, check it with `shasum -a 256 -c SHA256SUMS`, unpack and move `mansur` into your `PATH`.
 
-**Uninstall:** `mansur stop && rm ~/.local/bin/mansur` (his state lives in `~/Library/Application Support/mansur`).
+**Uninstall:** run `mansur autostart off && mansur stop` (or quit him from the menu), then delete `Mansur.app` from Applications or `~/.local/bin/mansur`. His state lives in `~/Library/Application Support/mansur`.
 
 </details>
 
-**Updates:** install the same way again and restart him (`mansur stop && mansur`); his state is kept. If you turn on **updates** in his menu, he checks GitHub once a day and tells you when a new version is out. He never installs anything by himself.
+**Update:** install the same way again and restart him; his state is kept. Turn on **updates** in his menu to be told when a new version is out.
 
 ## Use
 
@@ -101,31 +103,29 @@ The network writes templates like `{time_en}`, and the app fills in the real tim
 
 **Training data:** [`brain/dialogs.txt`](brain/dialogs.txt) (Russian) and [`brain/dialogs_en.txt`](brain/dialogs_en.txt) (English), expanded with paraphrases, typos and language switches by [`cmd/train`](cmd/train).
 
-**Training** runs on the Mac GPU with PyTorch (~25 s per epoch). It is only needed to retrain; the app itself is pure Go.
+## Privacy
+
+- No telemetry. The only network request is the optional update check ([`update.go`](update.go)), off until you turn it on.
+- Reads only window positions, never their contents or titles, and no keystrokes outside his own chat box.
+- Everything he remembers about you stays in `~/Library/Application Support/mansur`, readable only by you.
+
+## Development
+
+```sh
+make build   # bin/mansur
+make run     # run in the foreground
+make dmg     # dist/Mansur.dmg (Apple Silicon + Intel)
+go test ./...
+MANSUR_ASSETS=docs go test -run TestReadmeAssets .   # re-render the README images
+```
+
+Retraining the brain runs on the Mac GPU with PyTorch (~25 s per epoch); the app itself is pure Go.
 
 ```sh
 go run ./cmd/train -dump training/data               # export tokenized samples
 uv venv training/.venv && uv pip install --python training/.venv/bin/python -r training/requirements.txt
 training/.venv/bin/python training/train.py           # writes training/out/weights.bin
 cp training/out/weights.bin brain/ && go test -v ./brain # quality report
-```
-
-## Privacy
-
-- **No network** and no telemetry. The one exception is the update check, and it is off until you turn it on in the menu: then once a day he asks GitHub for the latest version number ([`update.go`](update.go)). Nothing about you is sent.
-- **No screen reading.** For climbing windows he reads only their positions, never contents or titles.
-- **No keyboard or clipboard access** except in his own input box.
-- His only files are `state.json` and a pid file, readable only by you. `state.json` holds his satiety and settings (including whether update checks are on), your name if you told him, the hours you are usually around and his character. Delete it and he starts fresh.
-
-Releases are built by [GitHub Actions](.github/workflows/release.yml) straight from a tagged commit and ship with `SHA256SUMS`.
-
-## Build
-
-```sh
-make build   # bin/mansur
-make run     # run in the foreground
-make dmg     # dist/Mansur.dmg (Apple Silicon + Intel)
-MANSUR_ASSETS=docs go test -run TestReadmeAssets .   # re-render these images
 ```
 
 ## License
