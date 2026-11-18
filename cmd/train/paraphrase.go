@@ -130,7 +130,8 @@ var intro = map[string]struct{ frames, answers []string }{
 func introSamples(rng *rand.Rand) []brain.Sample {
 	pick := func(s []string) string { return s[rng.IntN(len(s))] }
 	var out []brain.Sample
-	for lang, in := range intro {
+	for _, lang := range []string{"ru", "en"} { // fixed order keeps the fixed-seed rng reproducible
+		in := intro[lang]
 		st := ruStyle
 		if lang == "en" {
 			st = enStyle

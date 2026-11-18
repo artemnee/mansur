@@ -16,6 +16,11 @@ func TestParseName(t *testing.T) {
 		"как меня зовут":            "",
 		"what's my name":            "",
 		"я устал":                   "",
+		"зови меня просто Саша":     "Саша",
+		"меня зовут не так":         "",
+		"call me back later":        "",
+		"i recall me saying that":   "",
+		"you can call me just Sam":  "Sam",
 	} {
 		if got := parseName(in); got != want {
 			t.Errorf("parseName(%q) = %q, want %q", in, got, want)

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"os/exec"
@@ -83,7 +84,7 @@ func latestRelease() (string, error) {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return "", nil
+		return "", fmt.Errorf("github: %s", resp.Status)
 	}
 	var r struct {
 		Tag string `json:"tag_name"`

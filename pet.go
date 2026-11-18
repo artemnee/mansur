@@ -68,10 +68,10 @@ type Pet struct {
 	home               float64 // he wanders around this point; moves when Mansur is dragged
 	climbFrom, climbTo NSPoint
 
-	bond  *bond // what he remembers about the human and how he feels about them
-	sulky bool  // offended: looks away from the cursor and grumbles
+	bond *bond // what he remembers about the human and how he feels about them
 
-	woke bool // just woken up: stretches next
+	woke      bool // just woken up: stretches next
+	awakeTill int  // after the human comes back he stays awake at least until this tick
 
 	saying   string // the mood Mansur wants to talk about
 	sayCD    int
@@ -109,7 +109,7 @@ func (p *Pet) say(mood string, chance float64) {
 
 func (p *Pet) chatMood() string {
 	switch {
-	case p.sulky:
+	case p.bond.sulky():
 		return "sulk"
 	case p.night:
 		return "night"
@@ -209,12 +209,12 @@ func (p *Pet) update(m NSPoint, area NSRect) {
 	moved := speed > 0.5
 	p.mouse = m
 	if moved {
-		if p.t-p.lastMove > tps*60*10/fast && p.st != stSleep { // the human is back after a break
-			p.say("back", 0.7)
+		if p.t-p.lastMove > tps*60*10/fast { // the human is back after a break
+			p.welcome()
 		}
 		p.lastMove = p.t
 	}
-	p.sulky = p.bond.sulky()
+	sulky := p.bond.sulky()
 	// Break reminder: 50 minutes at the computer in a row (a pause of 5+ minutes resets the count).
 	if p.t-p.lastMove < tps*60*5 {
 		p.workT++
@@ -250,7 +250,7 @@ func (p *Pet) update(m NSPoint, area NSRect) {
 
 	if dx := m.X - (p.x + p.size/2); math.Abs(dx) < 400 && math.Abs(dx) > p.size/4 {
 		p.look = int(math.Copysign(1, dx))
-		if p.sulky {
+		if sulky {
 			p.look = -p.look // turns away from you
 		}
 	} else {
@@ -274,7 +274,7 @@ func (p *Pet) update(m NSPoint, area NSRect) {
 	onWindow := ground > area.Origin.Y
 
 	// A cursor darting around nearby is prey.
-	if dx, dy := m.X-(p.x+p.size/2), m.Y-(p.y+p.size/2); !p.sulky && speed > 12 && math.Abs(dx) < 250 &&
+	if dx, dy := m.X-(p.x+p.size/2), m.Y-(p.y+p.size/2); !sulky && speed > 12 && math.Abs(dx) < 250 &&
 		math.Abs(dx) > p.size/2 && math.Abs(dy) < 200 && (p.st == stIdle || p.st == stWalk) && rand.Float64() < 0.04 {
 		p.dir = int(math.Copysign(1, dx))
 		p.set(stChase)
@@ -286,7 +286,7 @@ func (p *Pet) update(m NSPoint, area NSRect) {
 		if p.night {
 			sleepAfter = tps * 60
 		}
-		if p.calm > sleepAfter {
+		if p.calm > sleepAfter && p.t > p.awakeTill {
 			p.set(stSleep)
 			p.say("sleep", 0.7)
 			break
@@ -299,7 +299,7 @@ func (p *Pet) update(m NSPoint, area NSRect) {
 			p.say("night", 1)
 		}
 		if rand.IntN(int(tps*150*(1-0.6*p.bond.Chatty))) == 0 { // a chatty cat talks more
-			if p.sulky {
+			if sulky {
 				p.say("sulk", 1)
 			} else {
 				p.say("idle", 1)
@@ -308,9 +308,13 @@ func (p *Pet) update(m NSPoint, area NSRect) {
 		if p.stT > p.stDur {
 			b := p.bond
 			climb, walk := 15+int(15*b.Independent), 65+int(20*b.Independent)
+			yawn := 3
+			if p.night || p.calm > tps*60 { // sleepy
+				yawn = 6
+			}
 			toCursor := m.X - (p.x + p.size/2)
 			switch r := rand.IntN(100); {
-			case !p.sulky && math.Abs(toCursor) < 300 && math.Abs(toCursor) > p.size/2 && rand.Float64() < b.Cuddly:
+			case !sulky && math.Abs(toCursor) < 300 && math.Abs(toCursor) > p.size/2 && rand.Float64() < b.Cuddly:
 				// A cuddly cat comes to the cursor.
 				p.dir = int(math.Copysign(1, toCursor))
 				p.set(stWalk)
@@ -322,11 +326,11 @@ func (p *Pet) update(m NSPoint, area NSRect) {
 			case r < walk:
 				p.dir = []int{-1, 1}[rand.IntN(2)]
 				p.set(stWalk)
-			case r < walk+4 || (p.night || p.calm > tps*60) && r < walk+10:
+			case r < walk+yawn:
 				p.set(stYawn)
-			case r < walk+8:
+			case r < walk+yawn+4:
 				p.set(stGroom)
-			case r < walk+10:
+			case r < walk+yawn+6:
 				p.set(stStretch)
 			default:
 				p.set(stIdle)
@@ -495,6 +499,20 @@ func (p *Pet) toggleSleep() {
 		p.lift = 0
 		p.set(stSleep)
 	}
+}
+
+// welcome greets the human back after a break, waking up first unless it is night.
+func (p *Pet) welcome() {
+	if p.st == stSleep {
+		if p.night {
+			return
+		}
+		p.spawn(pBang, 25, 6)
+		p.woke = true
+		p.set(stSurprised)
+		p.awakeTill = p.t + tps*60*3
+	}
+	p.say("back", 0.7)
 }
 
 // listen is called when the human writes something: he wakes up and looks.

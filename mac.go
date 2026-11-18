@@ -11,7 +11,6 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
-	"slices"
 	"strings"
 	"syscall"
 	"time"
@@ -208,7 +207,7 @@ type ui struct {
 	sig    chan os.Signal
 	keys   map[string]objc.ID
 	timer  objc.ID
-	upd    chan string // latest release tag from a background check
+	upd    chan string // latest release tag from a background check, "" if it failed
 	newVer string      // a newer release is out
 	slow   bool        // ticking at 1/slowSteps rate while nothing happens
 	onQuit func()
@@ -285,6 +284,9 @@ func (u *ui) tick() {
 	}
 	select {
 	case tag := <-u.upd:
+		if tag == "" { // offline or GitHub refused: try again in an hour, not tomorrow
+			updateChecked = time.Now().Add(-23 * time.Hour)
+		}
 		if newer(tag, appVersion()) && tag != u.newVer {
 			u.newVer = tag
 			u.showBubble(fmt.Sprintf(tr("update_new"), tag))
@@ -303,13 +305,16 @@ func (u *ui) tick() {
 			h := time.Now().Hour()
 			p.night = h >= 23 || h < 5
 		}
-		if p.t%(tps*5) == 0 {
+		// Window edges: every 5 s on the floor, every second while standing on a window (it may move
+		// or close), and right before he decides whether to climb.
+		if p.t%(tps*5) == 0 || p.y > area.Origin.Y && p.t%tps == 0 || p.st == stIdle && p.stT == p.stDur {
 			u.scanWindows()
 		}
 		if minute := tps * 60 / fast; p.t%minute == 0 && p.t > 0 {
-			p.bond.minute(time.Now(), p.t-p.lastMove < minute, p.calm > minute*30)
+			active := p.t-p.lastMove < minute
+			p.bond.minute(time.Now(), active, active && p.calm > minute*30)
 			u.offerUpdates()
-			u.checkUpdates(false)
+			u.checkUpdates()
 			saveState(p, u.born)
 			if fast > 1 {
 				b := p.bond
@@ -534,15 +539,17 @@ func (u *ui) offerUpdates() {
 }
 
 // checkUpdates asks GitHub for the latest release in the background, at most once a day.
-func (u *ui) checkUpdates(now bool) {
-	if updates == nil || !*updates || appVersion() == "" || !now && time.Since(updateChecked) < 24*time.Hour {
+func (u *ui) checkUpdates() {
+	if updates == nil || !*updates || appVersion() == "" || time.Since(updateChecked) < 24*time.Hour {
 		return
 	}
 	updateChecked = time.Now()
 	go func() {
-		if tag, err := latestRelease(); err == nil && tag != "" {
-			u.upd <- tag
+		tag, err := latestRelease()
+		if err != nil {
+			tag = ""
 		}
+		u.upd <- tag
 	}()
 }
 
@@ -550,7 +557,7 @@ func (u *ui) toggleUpdates() {
 	on := updates == nil || !*updates
 	updates = &on
 	saveState(u.pet, u.born)
-	u.checkUpdates(true)
+	u.checkUpdates() // right away the first time, otherwise within the daily limit
 	u.openMenu()
 }
 
@@ -579,24 +586,25 @@ func (u *ui) openMenu() {
 	if langSetting != "" {
 		langLabel = langSetting
 	}
-	u.items = []item{
-		{tr("full") + strings.Repeat("█", full) + strings.Repeat("░", 5-full), nil},
-		{fmt.Sprintf(tr("age"), int(time.Since(u.born).Hours()/24)), nil},
-		{tr("talk"), func() { u.openInput(modeChat) }},
-		{tr("feed"), func() { p.feed(); u.closePanel() }},
-		{sleepLabel, func() { p.toggleSleep(); u.closePanel() }},
-		{tr("breaks") + onoff(p.breaks), func() { p.breaks = !p.breaks; u.openMenu() }},
-		{tr("autostart") + onoff(autostartOn()), func() { _ = setAutostart(!autostartOn()); u.openMenu() }},
-		{tr("language") + langLabel, u.nextLang},
-		{tr("quit"), u.quit},
-	}
-	if appVersion() != "" { // local builds have no release to compare with
-		u.items = slices.Insert(u.items, len(u.items)-1, item{tr("updates") + onoff(updates != nil && *updates), u.toggleUpdates})
-	}
+	u.items = nil
 	if u.newVer != "" {
-		u.items = slices.Insert(u.items, 0, item{fmt.Sprintf(tr("update_to"), u.newVer), func() { openReleases(); u.closePanel() }})
+		u.items = append(u.items, item{fmt.Sprintf(tr("update_to"), u.newVer), func() { openReleases(); u.closePanel() }})
 	}
-	u.items = slices.Insert(u.items, 2+min(1, len(u.newVer)), about...)
+	u.items = append(u.items,
+		item{tr("full") + strings.Repeat("█", full) + strings.Repeat("░", 5-full), nil},
+		item{fmt.Sprintf(tr("age"), int(time.Since(u.born).Hours()/24)), nil})
+	u.items = append(u.items, about...)
+	u.items = append(u.items,
+		item{tr("talk"), func() { u.openInput(modeChat) }},
+		item{tr("feed"), func() { p.feed(); u.closePanel() }},
+		item{sleepLabel, func() { p.toggleSleep(); u.closePanel() }},
+		item{tr("breaks") + onoff(p.breaks), func() { p.breaks = !p.breaks; u.openMenu() }},
+		item{tr("autostart") + onoff(autostartOn()), func() { _ = setAutostart(!autostartOn()); u.openMenu() }},
+		item{tr("language") + langLabel, u.nextLang})
+	if appVersion() != "" { // local builds have no release to compare with
+		u.items = append(u.items, item{tr("updates") + onoff(updates != nil && *updates), u.toggleUpdates})
+	}
+	u.items = append(u.items, item{tr("quit"), u.quit})
 	if u.mode != modeMenu {
 		u.hover = -1
 	}

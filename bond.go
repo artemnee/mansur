@@ -125,16 +125,24 @@ func (b *bond) trait() string {
 	return name
 }
 
+// The phrase must start a word ("recall me" is not "call me"); filler words before the name are skipped.
 var namePatterns = []*regexp.Regexp{
-	regexp.MustCompile(`(?:меня зовут|зови меня|мо[её] имя)\s+([a-zа-яё][a-zа-яё-]{1,19})`),
-	regexp.MustCompile(`(?:my name is|my name's|call me)\s+([a-z][a-z-]{1,19})`),
+	regexp.MustCompile(`(?:^|[^\pL])(?:меня зовут|зови меня|мо[её] имя)\s+(?:просто\s+|теперь\s+|лучше\s+)?([a-zа-яё][a-zа-яё-]{1,19})`),
+	regexp.MustCompile(`(?:^|[^\pL])(?:my name is|my name's|call me)\s+(?:just\s+)?([a-z][a-z-]{1,19})`),
+}
+
+// notNames are words that follow the phrases in ordinary sentences: "call me back", "меня зовут не так".
+var notNames = map[string]bool{
+	"не": true, "так": true, "как": true, "тоже": true, "иначе": true, "пожалуйста": true,
+	"back": true, "later": true, "when": true, "if": true, "not": true, "maybe": true, "please": true,
+	"now": true, "again": true, "tomorrow": true, "tonight": true, "anytime": true, "whatever": true,
 }
 
 // parseName finds "меня зовут Фёдор" / "call me Alex" in a message.
 func parseName(text string) string {
 	lower := strings.ToLower(text)
 	for _, re := range namePatterns {
-		if m := re.FindStringSubmatch(lower); m != nil {
+		if m := re.FindStringSubmatch(lower); m != nil && !notNames[m[1]] {
 			r, size := utf8.DecodeRuneInString(m[1])
 			return string(unicode.ToUpper(r)) + m[1][size:]
 		}
