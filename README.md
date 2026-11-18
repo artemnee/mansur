@@ -46,6 +46,8 @@ Picks the build for your Mac, **verifies the checksum** and installs `mansur` to
 
 </details>
 
+**Updates:** install the same way again and restart him (`mansur stop && mansur`); his state is kept. If you turn on **updates** in his menu, he checks GitHub once a day and tells you when a new version is out. He never installs anything by himself.
+
 ## Use
 
 ```sh
@@ -61,7 +63,7 @@ mansur -size 6         # a bigger cat
 | hover over him | purrs, hearts fly |
 | click | jumps |
 | drag | dangles, then lands on a window or the Dock |
-| right click | menu: talk, feed, sleep, break reminders, autostart, language |
+| right click | menu: talk, feed, sleep, break reminders, autostart, language, updates |
 | leave him be | strolls around his corner, follows the cursor, hops onto nearby windows, yawns, stretches, grooms, gets hungry |
 | dart the cursor around him | hunts it and pounces |
 | work 50 min straight | reminds you to take a break |
@@ -110,10 +112,10 @@ cp training/out/weights.bin brain/ && go test -v ./brain # quality report
 
 ## Privacy
 
-- **No network** and no telemetry.
+- **No network** and no telemetry. The one exception is the update check, and it is off until you turn it on in the menu: then once a day he asks GitHub for the latest version number ([`update.go`](update.go)). Nothing about you is sent.
 - **No screen reading.** For climbing windows he reads only their positions, never contents or titles.
 - **No keyboard or clipboard access** except in his own input box.
-- His only files are `state.json` and a pid file, readable only by you. `state.json` holds his satiety and settings, your name if you told him, the hours you are usually around and his character. Delete it and he starts fresh.
+- His only files are `state.json` and a pid file, readable only by you. `state.json` holds his satiety and settings (including whether update checks are on), your name if you told him, the hours you are usually around and his character. Delete it and he starts fresh.
 
 Releases are built by [GitHub Actions](.github/workflows/release.yml) straight from a tagged commit and ship with `SHA256SUMS`.
 

@@ -12,12 +12,15 @@ import (
 
 // Persisted state: ~/Library/Application Support/mansur/state.json
 type saved struct {
-	Hunger float64   `json:"hunger"`
-	Breaks bool      `json:"breaks"`
-	Lang   string    `json:"lang,omitempty"` // "" follows the system language
-	Bond   *bond     `json:"bond,omitempty"`
-	Born   time.Time `json:"born"`
-	At     time.Time `json:"at"`
+	Hunger float64 `json:"hunger"`
+	Breaks bool    `json:"breaks"`
+	Lang   string  `json:"lang,omitempty"` // "" follows the system language
+	Bond   *bond   `json:"bond,omitempty"`
+
+	Updates       *bool     `json:"updates,omitempty"` // nil: not offered yet
+	UpdateChecked time.Time `json:"update_checked,omitempty"`
+	Born          time.Time `json:"born"`
+	At            time.Time `json:"at"`
 }
 
 func statePath() string {
@@ -39,6 +42,7 @@ func loadState(p *Pet) time.Time {
 	if s.Bond != nil {
 		p.bond = s.Bond
 	}
+	updates, updateChecked = s.Updates, s.UpdateChecked
 	return s.Born
 }
 
@@ -51,7 +55,8 @@ func loadLang() {
 }
 
 func saveState(p *Pet, born time.Time) {
-	b, _ := json.MarshalIndent(saved{Hunger: p.hunger, Breaks: p.breaks, Lang: langSetting, Bond: p.bond, Born: born, At: time.Now()}, "", "  ")
+	b, _ := json.MarshalIndent(saved{Hunger: p.hunger, Breaks: p.breaks, Lang: langSetting, Bond: p.bond,
+		Updates: updates, UpdateChecked: updateChecked, Born: born, At: time.Now()}, "", "  ")
 	_ = os.MkdirAll(filepath.Dir(statePath()), 0o700)
 	_ = os.WriteFile(statePath(), b, 0o600)
 }

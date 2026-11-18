@@ -24,9 +24,9 @@ jobs:
 
       - name: Build
         run: |
-          make dmg
+          make dmg VERSION=$GITHUB_REF_NAME
           for arch in arm64 amd64; do
-            CGO_ENABLED=0 GOARCH=$arch go build -trimpath -ldflags="-s -w" -o dist/mansur .
+            CGO_ENABLED=0 GOARCH=$arch go build -trimpath -ldflags="-s -w -X main.version=$GITHUB_REF_NAME" -o dist/mansur .
             tar -C dist -czf dist/mansur-darwin-$arch.tar.gz mansur
             rm dist/mansur
           done

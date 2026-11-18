@@ -208,7 +208,9 @@ type ui struct {
 	sig    chan os.Signal
 	keys   map[string]objc.ID
 	timer  objc.ID
-	slow   bool // ticking at 1/slowSteps rate while nothing happens
+	upd    chan string // latest release tag from a background check
+	newVer string      // a newer release is out
+	slow   bool        // ticking at 1/slowSteps rate while nothing happens
 	onQuit func()
 }
 
@@ -281,6 +283,14 @@ func (u *ui) tick() {
 		}
 	default:
 	}
+	select {
+	case tag := <-u.upd:
+		if newer(tag, appVersion()) && tag != u.newVer {
+			u.newVer = tag
+			u.showBubble(fmt.Sprintf(tr("update_new"), tag))
+		}
+	default:
+	}
 
 	p := u.pet
 	steps := 1
@@ -298,6 +308,8 @@ func (u *ui) tick() {
 		}
 		if minute := tps * 60 / fast; p.t%minute == 0 && p.t > 0 {
 			p.bond.minute(time.Now(), p.t-p.lastMove < minute, p.calm > minute*30)
+			u.offerUpdates()
+			u.checkUpdates(false)
 			saveState(p, u.born)
 			if fast > 1 {
 				b := p.bond
@@ -510,6 +522,38 @@ func (u *ui) updateBubble() {
 	u.bubS.show()
 }
 
+// offerUpdates mentions once, a few minutes after the first start, that update checks exist.
+// They stay off unless the human turns them on.
+func (u *ui) offerUpdates() {
+	if updates != nil || appVersion() == "" || u.pet.t < tps*60*3/fast || u.bubble != nil || u.thinking {
+		return
+	}
+	off := false
+	updates = &off
+	u.showBubble(tr("update_offer"))
+}
+
+// checkUpdates asks GitHub for the latest release in the background, at most once a day.
+func (u *ui) checkUpdates(now bool) {
+	if updates == nil || !*updates || appVersion() == "" || !now && time.Since(updateChecked) < 24*time.Hour {
+		return
+	}
+	updateChecked = time.Now()
+	go func() {
+		if tag, err := latestRelease(); err == nil && tag != "" {
+			u.upd <- tag
+		}
+	}()
+}
+
+func (u *ui) toggleUpdates() {
+	on := updates == nil || !*updates
+	updates = &on
+	saveState(u.pet, u.born)
+	u.checkUpdates(true)
+	u.openMenu()
+}
+
 func onoff(b bool) string {
 	if b {
 		return tr("on")
@@ -546,7 +590,13 @@ func (u *ui) openMenu() {
 		{tr("language") + langLabel, u.nextLang},
 		{tr("quit"), u.quit},
 	}
-	u.items = slices.Insert(u.items, 2, about...)
+	if appVersion() != "" { // local builds have no release to compare with
+		u.items = slices.Insert(u.items, len(u.items)-1, item{tr("updates") + onoff(updates != nil && *updates), u.toggleUpdates})
+	}
+	if u.newVer != "" {
+		u.items = slices.Insert(u.items, 0, item{fmt.Sprintf(tr("update_to"), u.newVer), func() { openReleases(); u.closePanel() }})
+	}
+	u.items = slices.Insert(u.items, 2+min(1, len(u.newVer)), about...)
 	if u.mode != modeMenu {
 		u.hover = -1
 	}
@@ -853,6 +903,7 @@ func runApp(scale float64, onQuit func()) {
 		bubS:    newSurface("NSWindow", objc.GetClass("NSView"), false),
 		panS:    newSurface("MansurPanel", panelView, true),
 		replies: make(chan reply, 1),
+		upd:     make(chan string, 1),
 		sig:     make(chan os.Signal, 1),
 		keys:    map[string]objc.ID{},
 		onQuit:  onQuit,
