@@ -19,6 +19,11 @@
   <img src="docs/demo.gif" alt="Mansur says hi, walks, gets petted, jumps, eats a berry and falls asleep" width="416">
 </p>
 
+<p align="center">
+  <img src="docs/live.gif" alt="Mansur on a real desktop: petted, dragged up and dropped" width="408"><br>
+  <sub>On a real desktop</sub>
+</p>
+
 ## Install
 
 <p align="center">
